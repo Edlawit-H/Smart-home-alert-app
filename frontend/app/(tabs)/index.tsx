@@ -3,174 +3,187 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
-  Vibration,
-  RefreshControl,
-  ScrollView,
+  FlatList,
+  TouchableOpacity,
+  Modal,
+  TextInput,
 } from "react-native";
+import * as Haptics from "expo-haptics";
+import { MaterialIcons } from "@expo/vector-icons";
 
-const SERVER_URL = "http://192.168.43.203:5000";
-
-type SensorStatus = "OK" | "ALERT";
+const SERVER_URL = "http://192.168.43.203:5000/status";
 
 export default function HomeScreen() {
-  const [sensors, setSensors] = useState({
-    smoke_sensor: "OK" as SensorStatus,
-    gas_sensor: "OK" as SensorStatus,
-    doorbell_sensor: "OK" as SensorStatus,
-  });
+  const [sensors, setSensors] = useState([
+    { id: "doorbell_sensor", name: "Main Door Bell", status: "OK" },
+    { id: "smoke_sensor", name: "Kitchen Smoke Sensor", status: "OK" },
+    { id: "gas_sensor", name: "Gas Sensor", status: "OK" },
+  ]);
 
-  const [refreshing, setRefreshing] = useState(false);
-
-  const fetchStatus = async () => {
-    try {
-      const response = await fetch(`${SERVER_URL}/status`);
-      const data = await response.json();
-
-      setSensors({
-        smoke_sensor: data.smoke_sensor,
-        gas_sensor: data.gas_sensor,
-        doorbell_sensor: data.doorbell_sensor,
-      });
-
-      // 🔔 VIBRATION LOGIC
-      if (
-        data.smoke_sensor === "ALERT" ||
-        data.gas_sensor === "ALERT" ||
-        data.doorbell_sensor === "ALERT"
-      ) {
-        Vibration.vibrate(500);
-      }
-    } catch (error) {
-      console.error("Failed to fetch sensor status", error);
-    }
-  };
+  const [editSensor, setEditSensor] = useState<any>(null);
+  const [tempName, setTempName] = useState("");
 
   useEffect(() => {
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 5000); // poll every 5s
+    const interval = setInterval(fetchStatus, 3000);
     return () => clearInterval(interval);
   }, []);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchStatus();
-    setRefreshing(false);
+  const fetchStatus = async () => {
+    try {
+      const res = await fetch(SERVER_URL);
+      const data = await res.json();
+
+      setSensors((prev) =>
+        prev.map((s) => {
+          const newStatus = data[s.id];
+          if (newStatus === "ALERT" && s.status !== "ALERT") {
+            Haptics.notificationAsync(
+              Haptics.NotificationFeedbackType.Error
+            );
+          }
+          return { ...s, status: newStatus };
+        })
+      );
+    } catch {
+      // silent fail for demo
+    }
+  };
+
+  const openEdit = (sensor: any) => {
+    setEditSensor(sensor);
+    setTempName(sensor.name);
+  };
+
+  const saveName = () => {
+    setSensors((prev) =>
+      prev.map((s) =>
+        s.id === editSensor.id ? { ...s, name: tempName } : s
+      )
+    );
+    setEditSensor(null);
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>🏠 Smart Home Alert System</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Smart Home Alerts</Text>
 
-      <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        <SensorCard
-          name="Smoke Sensor"
-          status={sensors.smoke_sensor}
-          danger
-        />
-        <SensorCard
-          name="Gas Sensor"
-          status={sensors.gas_sensor}
-          danger
-        />
-        <SensorCard
-          name="Doorbell"
-          status={sensors.doorbell_sensor}
-          danger={false}
-        />
+      <FlatList
+        data={sensors}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View
+            style={[
+              styles.card,
+              item.status === "ALERT" ? styles.alert : styles.ok,
+            ]}
+          >
+            <View style={styles.row}>
+              <MaterialIcons
+                name={
+                  item.id === "doorbell_sensor"
+                    ? "doorbell"
+                    : item.id === "smoke_sensor"
+                    ? "fireplace"
+                    : "gas-meter"
+                }
+                size={28}
+                color={item.status === "ALERT" ? "#b00020" : "#2e7d32"}
+              />
 
-        <Text style={styles.footer}>
-          Pull down to refresh sensor status
-        </Text>
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.sensorName}>{item.name}</Text>
+                <Text
+                  style={[
+                    styles.status,
+                    item.status === "ALERT"
+                      ? styles.alertText
+                      : styles.okText,
+                  ]}
+                >
+                  {item.status}
+                </Text>
+              </View>
 
-function SensorCard({
-  name,
-  status,
-  danger,
-}: {
-  name: string;
-  status: SensorStatus;
-  danger: boolean;
-}) {
-  const isAlert = status === "ALERT";
+              <TouchableOpacity onPress={() => openEdit(item)}>
+                <MaterialIcons name="edit" size={22} color="#555" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      />
 
-  return (
-    <View
-      style={[
-        styles.card,
-        { borderLeftColor: isAlert ? "#e63946" : "#2a9d8f" },
-      ]}
-    >
-      <Text style={styles.sensorName}>{name}</Text>
-      <Text
-        style={[
-          styles.status,
-          { color: isAlert ? "#e63946" : "#2a9d8f" },
-        ]}
-      >
-        {isAlert ? "⚠ ALERT" : "✔ OK"}
-      </Text>
+      {/* Edit Modal */}
+      <Modal visible={!!editSensor} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>Rename Sensor</Text>
 
-      {isAlert && danger && (
-        <Text style={styles.warningText}>
-          Immediate attention required!
-        </Text>
-      )}
+            <TextInput
+              style={styles.input}
+              value={tempName}
+              onChangeText={setTempName}
+            />
 
-      {isAlert && !danger && (
-        <Text style={styles.warningText}>
-          Someone is at the door 🚪
-        </Text>
-      )}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                onPress={() => setEditSensor(null)}
+              >
+                <Text style={styles.cancel}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={saveName}>
+                <Text style={styles.save}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
-
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1, padding: 16, backgroundColor: "#f5f5f5" },
+  title: { fontSize: 24, fontWeight: "bold", marginBottom: 16 },
+
+  card: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+
+  row: { flexDirection: "row", alignItems: "center" },
+
+  ok: { backgroundColor: "#e8f5e9" },
+  alert: { backgroundColor: "#fdecea" },
+
+  sensorName: { fontSize: 16, fontWeight: "600" },
+  status: { marginTop: 4, fontWeight: "bold" },
+  okText: { color: "#2e7d32" },
+  alertText: { color: "#b00020" },
+
+  modalOverlay: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modal: {
+    width: "80%",
+    backgroundColor: "#fff",
+    borderRadius: 12,
     padding: 16,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    textAlign: "center",
+  modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 12 },
+  input: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 8,
     marginBottom: 16,
   },
-  card: {
-    backgroundColor: "#ffffff",
-    padding: 16,
-    marginBottom: 12,
-    borderRadius: 10,
-    borderLeftWidth: 6,
-    elevation: 3,
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
-  sensorName: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  status: {
-    fontSize: 16,
-    marginTop: 4,
-    fontWeight: "bold",
-  },
-  warningText: {
-    marginTop: 6,
-    color: "#e63946",
-    fontWeight: "600",
-  },
-  footer: {
-    textAlign: "center",
-    color: "#6c757d",
-    marginTop: 12,
-  },
+  cancel: { color: "#777" },
+  save: { color: "#1976d2", fontWeight: "bold" },
 });
