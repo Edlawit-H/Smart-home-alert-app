@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   View, 
   Text, 
@@ -7,17 +7,16 @@ import {
   ScrollView, 
   Platform, 
   StatusBar, 
-  Switch, 
   TouchableOpacity, 
   Alert 
 } from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function ProfileScreen() {
-  // --- STATE FOR PROFILE SETTINGS ---
-  const [isDarkMode, setIsDarkMode] = useState(true);
-  const [isBiometricEnabled, setIsBiometricEnabled] = useState(false);
-  const [isPreciseLocation, setIsPreciseLocation] = useState(true);
+  const { theme, isDark } = useTheme();
+  const router = useRouter();
 
   const handleLogout = () => {
     Alert.alert(
@@ -31,52 +30,41 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Dynamic Status Bar */}
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>User Profile</Text>
         
-        {/* PROFILE HEADER */}
-        <View style={styles.profileHeader}>
-          <View style={styles.avatar}>
+        {/* HEADER WITH SETTINGS ICON */}
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: theme.text }]}>User Profile</Text>
+          <TouchableOpacity 
+            onPress={() => router.push('/settings')}
+            style={styles.iconCircle}
+          >
+            <Ionicons name="settings-outline" size={24} color={theme.primary} />
+          </TouchableOpacity>
+        </View>
+        
+        {/* PROFILE HEADER CARD */}
+        <View style={[styles.profileHeader, { backgroundColor: theme.card }]}>
+          <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
             <MaterialIcons name="person" size={50} color="white" />
           </View>
-          <Text style={styles.userName}>John Doe</Text>
-          <Text style={styles.userEmail}>j.doe@smarthome.io</Text>
-          <TouchableOpacity style={styles.editBtn}>
-            <Text style={styles.editBtnText}>Edit Profile</Text>
+          <Text style={[styles.userName, { color: theme.text }]}>John Doe</Text>
+          <Text style={[styles.userEmail, { color: theme.subtext }]}>j.doe@smarthome.io</Text>
+          <TouchableOpacity style={[styles.editBtn, { borderColor: theme.primary }]}>
+            <Text style={[styles.editBtnText, { color: theme.primary }]}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
 
-        {/* SETTINGS SECTION */}
-        <Text style={styles.sectionTitle}>App Settings</Text>
-        <View style={styles.settingsGroup}>
-          <SettingToggle 
-            icon="dark-mode" 
-            label="Dark Mode" 
-            value={isDarkMode} 
-            onValueChange={setIsDarkMode} 
-          />
-          <SettingToggle 
-            icon="fingerprint" 
-            label="Biometric Login" 
-            value={isBiometricEnabled} 
-            onValueChange={setIsBiometricEnabled} 
-          />
-          <SettingToggle 
-            icon="location-on" 
-            label="Precise Location" 
-            value={isPreciseLocation} 
-            onValueChange={setIsPreciseLocation} 
-          />
-        </View>
-
         {/* SYSTEM INFORMATION SECTION */}
-        <Text style={styles.sectionTitle}>System Info</Text>
-        <View style={styles.settingsGroup}>
-          <InfoRow label="System ID" value="SH-882-991" />
-          <InfoRow label="Home Location" value="Main Residence" />
-          <InfoRow label="App Version" value="2.4.0 (Stable)" />
+        <Text style={[styles.sectionTitle, { color: theme.primary }]}>System Info</Text>
+        <View style={[styles.settingsGroup, { backgroundColor: theme.card }]}>
+          <InfoRow label="System ID" value="SH-882-991" theme={theme} />
+          <InfoRow label="Home Location" value="Main Residence" theme={theme} />
+          <InfoRow label="App Version" value="2.4.0 (Stable)" theme={theme} isLast />
         </View>
 
         {/* ACCOUNT ACTIONS */}
@@ -90,73 +78,53 @@ export default function ProfileScreen() {
   );
 }
 
-// --- SUB-COMPONENTS FOR CLEANER CODE ---
-
-const SettingToggle = ({ icon, label, value, onValueChange }: any) => (
-  <View style={styles.settingRow}>
-    <View style={styles.settingLabelGroup}>
-      <MaterialIcons name={icon} size={22} color="#94a3b8" style={{ marginRight: 12 }} />
-      <Text style={styles.settingLabel}>{label}</Text>
-    </View>
-    <Switch 
-      value={value} 
-      onValueChange={onValueChange} 
-      trackColor={{ false: "#334155", true: "#3b82f6" }}
-      thumbColor={value ? "#fff" : "#94a3b8"}
-    />
-  </View>
-);
-
-const InfoRow = ({ label, value }: { label: string, value: string }) => (
-  <View style={styles.infoRow}>
-    <Text style={styles.infoLabel}>{label}</Text>
-    <Text style={styles.infoValue}>{value}</Text>
+// --- SUB-COMPONENT FOR SYSTEM INFO ---
+const InfoRow = ({ label, value, theme, isLast }: any) => (
+  <View style={[styles.infoRow, !isLast && { borderBottomColor: theme.border, borderBottomWidth: 1 }]}>
+    <Text style={[styles.infoLabel, { color: theme.subtext }]}>{label}</Text>
+    <Text style={[styles.infoValue, { color: theme.text }]}>{value}</Text>
   </View>
 );
 
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#0f172a', 
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 
   },
   scrollContent: { padding: 20, paddingBottom: 40 },
-  title: { color: 'white', fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 25,
+  },
+  title: { fontSize: 24, fontWeight: 'bold' },
+  iconCircle: {
+    padding: 8,
+    borderRadius: 50,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+  },
   
-  // Header
-  profileHeader: { alignItems: 'center', marginBottom: 30, backgroundColor: '#1e293b', padding: 25, borderRadius: 20 },
-  avatar: { backgroundColor: '#3b82f6', padding: 15, borderRadius: 50, marginBottom: 12 },
-  userName: { color: 'white', fontSize: 20, fontWeight: 'bold' },
-  userEmail: { color: '#94a3b8', fontSize: 14, marginBottom: 15 },
-  editBtn: { backgroundColor: 'rgba(59, 130, 246, 0.1)', paddingVertical: 8, paddingHorizontal: 20, borderRadius: 20, borderWidth: 1, borderColor: '#3b82f6' },
-  editBtnText: { color: '#3b82f6', fontWeight: 'bold', fontSize: 14 },
+  // Header Card
+  profileHeader: { alignItems: 'center', marginBottom: 30, padding: 25, borderRadius: 20, elevation: 2 },
+  avatar: { padding: 15, borderRadius: 50, marginBottom: 12, elevation: 4 },
+  userName: { fontSize: 20, fontWeight: 'bold' },
+  userEmail: { fontSize: 14, marginBottom: 15 },
+  editBtn: { paddingVertical: 8, paddingHorizontal: 20, borderRadius: 20, borderWidth: 1 },
+  editBtnText: { fontWeight: 'bold', fontSize: 14 },
 
   // Sections
-  sectionTitle: { color: '#3b82f6', fontSize: 13, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, marginLeft: 5 },
-  settingsGroup: { backgroundColor: '#1e293b', borderRadius: 15, marginBottom: 25, overflow: 'hidden' },
+  sectionTitle: { fontSize: 13, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, marginLeft: 5 },
+  settingsGroup: { borderRadius: 15, marginBottom: 25, overflow: 'hidden', elevation: 2 },
   
-  // Toggle Row
-  settingRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    padding: 16, 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#334155' 
-  },
-  settingLabelGroup: { flexDirection: 'row', alignItems: 'center' },
-  settingLabel: { color: 'white', fontSize: 16 },
-
   // Info Row
   infoRow: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     padding: 16, 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#334155' 
   },
-  infoLabel: { color: '#94a3b8', fontSize: 15 },
-  infoValue: { color: 'white', fontSize: 15, fontWeight: '500' },
+  infoLabel: { fontSize: 15 },
+  infoValue: { fontSize: 15, fontWeight: '500' },
 
   // Logout
   logoutBtn: { 
@@ -167,7 +135,8 @@ const styles = StyleSheet.create({
     padding: 16, 
     borderRadius: 15, 
     borderWidth: 1, 
-    borderColor: '#ef4444' 
+    borderColor: '#ef4444',
+    marginTop: 10
   },
   logoutText: { color: '#ef4444', fontWeight: 'bold', fontSize: 16, marginLeft: 10 }
 });

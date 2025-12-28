@@ -1,36 +1,33 @@
 import { Tabs } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
-import { View, Platform } from "react-native";
+import { Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const { theme, isDark } = useTheme();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        // This is the key part to fix overlap:
+        // Dynamic styling based on Light/Dark mode
         tabBarStyle: {
-          backgroundColor: '#1e293b',
-          borderTopColor: '#334155',
+          backgroundColor: theme.card,
+          borderTopColor: theme.border,
           borderTopWidth: 1,
-          
-          // Use insets.bottom to push the bar above the phone's nav buttons
-          // We add extra padding (10) to make it look "airy" and professional
-          height: Platform.OS === 'android' ? 70 + insets.bottom : 85, 
-          paddingBottom: Platform.OS === 'android' ? insets.bottom + 10 : insets.bottom,
-          paddingTop: 10,
-          
-          // Elevation for Android shadow
-          elevation: 10, 
+          // Calculate height based on phone's safe area (avoids overlap)
+          height: Platform.OS === 'android' ? 65 + insets.bottom : 80,
+          paddingBottom: Platform.OS === 'android' ? insets.bottom + 8 : insets.bottom,
+          paddingTop: 8,
+          elevation: 10,
         },
-        tabBarActiveTintColor: '#3b82f6',
-        tabBarInactiveTintColor: '#94a3b8',
+        tabBarActiveTintColor: theme.primary,
+        tabBarInactiveTintColor: theme.subtext,
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: '500',
-          marginBottom: 5, // Adds space between icon and text
+          fontWeight: '600',
         },
       }}
     >
@@ -38,7 +35,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color }) => (
             <MaterialIcons name="home" size={28} color={color} />
           ),
         }}
@@ -48,7 +45,7 @@ export default function TabLayout() {
         name="history"
         options={{
           title: "History",
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color }) => (
             <MaterialIcons name="history" size={28} color={color} />
           ),
         }}
@@ -58,7 +55,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color }) => (
             <MaterialIcons name="person" size={28} color={color} />
           ),
         }}

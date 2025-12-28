@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 
-const Colors = {
+export const Colors = {
   dark: {
     background: '#0f172a',
     card: '#1e293b',
