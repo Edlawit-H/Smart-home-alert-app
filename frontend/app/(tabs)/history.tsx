@@ -1,8 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, Platform, StatusBar } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, ScrollView, Platform, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function HistoryScreen() {
+  const { theme } = useTheme(); // Get theme from context
+
   // Mock data for alerts
   const logs = [
     { id: '1', type: 'Gas Detector', msg: 'Gas Level Normal', date: 'Dec 27, 2025', time: '14:20:05' },
@@ -12,17 +15,25 @@ export default function HistoryScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>Alert History</Text>
+        <Text style={[styles.title, { color: theme.text }]}>Alert History</Text>
         
         {logs.map((log) => (
-          <View key={log.id} style={styles.logCard}>
+          <View
+            key={log.id}
+            style={[
+              styles.logCard,
+              { backgroundColor: theme.card, borderLeftColor: theme.primary }
+            ]}
+          >
             <View style={styles.logHeader}>
-              <Text style={styles.logType}>{log.type}</Text>
-              <Text style={styles.logTimestamp}>{log.date} | {log.time}</Text>
+              <Text style={[styles.logType, { color: theme.primary }]}>{log.type}</Text>
+              <Text style={[styles.logTimestamp, { color: theme.subtext }]}>
+                {log.date} | {log.time}
+              </Text>
             </View>
-            <Text style={styles.logMsg}>{log.msg}</Text>
+            <Text style={[styles.logMsg, { color: theme.text }]}>{log.msg}</Text>
           </View>
         ))}
       </ScrollView>
@@ -31,19 +42,17 @@ export default function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+  container: { flex: 1, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
   scrollContent: { padding: 20 },
-  title: { color: 'white', fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
   logCard: { 
-    backgroundColor: '#1e293b', 
     padding: 15, 
     borderRadius: 12, 
     marginBottom: 10, 
-    borderLeftWidth: 4, 
-    borderLeftColor: '#3b82f6' 
+    borderLeftWidth: 4
   },
   logHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
-  logType: { color: '#3b82f6', fontWeight: 'bold', fontSize: 14 },
-  logTimestamp: { color: '#94a3b8', fontSize: 11, fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
-  logMsg: { color: 'white', fontSize: 16 }
+  logType: { fontWeight: 'bold', fontSize: 14 },
+  logTimestamp: { fontSize: 11, fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
+  logMsg: { fontSize: 16 }
 });
